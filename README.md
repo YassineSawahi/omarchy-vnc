@@ -64,6 +64,15 @@ Some monitors (HDMI ones especially) drop off the bus when the lock screen power
 - `vnc.lua`: copy to `~/.config/hypr/vnc.lua` and add `require("hypr.vnc")` to `~/.config/hypr/hyprland.lua`. While wayvnc runs, it skips requests to power the display off.
 - `vnc-wake` + `vnc-wake.service`: copy the script to `~/.local/bin/` and the unit to `~/.config/systemd/user/`, then `systemctl --user enable --now vnc-wake`. It wakes the display when wayvnc starts, and powers it off again when wayvnc stops while the session is locked.
 
+## Remove
+
+```bash
+python3 ~/.config/omarchy/plugins/io.github.yassinesawahi.vnc/vnc.py off   # stop wayvnc and shut every guest out
+omarchy plugin remove io.github.yassinesawahi.vnc
+```
+
+If you installed the extras: `systemctl --user disable --now vnc-wake`, delete `~/.local/bin/vnc-wake` and `~/.config/systemd/user/vnc-wake.service`, and remove `require("hypr.vnc")` from `~/.config/hypr/hyprland.lua` along with `~/.config/hypr/vnc.lua`. Your `~/.config/wayvnc/config` and `guests.json` stay; drop the guests' grants from your tailnet policy.
+
 ## License
 
 MIT

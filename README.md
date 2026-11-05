@@ -55,6 +55,8 @@ password=change-me
 
 The helper works on its own too: `vnc.py on|off|toggle`, `vnc.py guest <name> on|off|toggle`, `vnc.py disconnect <client-id>`.
 
+With [omarchy-phone](https://github.com/YassineSawahi/omarchy-phone) installed too, your phone gets a "VNC on/off" button (KDE Connect's Run command) that switches this and tells you how it went.
+
 ## Optional: keep the display lit while VNC runs
 
 Some monitors (HDMI ones especially) drop off the bus when the lock screen powers them off. A VNC viewer waking one makes the connector bounce, and Hyprland 0.56 crashed when that happened mid-capture. [`extras/`](extras) has the workaround:

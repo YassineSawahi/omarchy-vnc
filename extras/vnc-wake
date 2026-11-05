@@ -1,0 +1,47 @@
+#!/bin/bash
+# Keep the display lit while wayvnc is running.
+#
+# Omarchy's lock screen powers the display off a few seconds after locking.
+# Some monitors (HDMI ones especially) then drop off the bus, and when a VNC client wakes one
+# the connector bounces and Hyprland 0.56 crashes removing the output wayvnc
+# is capturing. (A powered-off output also gives the viewer a black screen.)
+# So the display stays on for as long as wayvnc runs: ~/.config/hypr/vnc.lua
+# refuses to power it off, and this handles the edges:
+#
+#   wayvnc starts while the display is off (started by hand; vnc.py wakes it
+#   itself): wake it now, before a viewer connects and wayvnc wakes it
+#   mid-capture.
+#
+#   wayvnc stops while the session is locked: power the display off, as the
+#   lock screen would have.
+#
+# Runs as vnc-wake.service. wayvnc doesn't have to be up first: wayvncctl
+# waits for it and follows it across restarts.
+
+set -u
+
+display_off() {
+  hyprctl monitors -j 2>/dev/null | jq -e 'any(.[]; .dpmsStatus == false)' >/dev/null 2>&1
+}
+
+wayvnc_started() {
+  display_off && omarchy-brightness-display on
+}
+
+wayvnc_stopped() {
+  # vnc.lua skips power-off while any wayvnc is left, so wait for it to exit.
+  for _ in {1..20}; do
+    pgrep -x wayvnc >/dev/null || break
+    sleep 0.25
+  done
+  if [[ $(omarchy-shell lock isLocked 2>/dev/null) == true ]]; then
+    omarchy-brightness-display off
+  fi
+}
+
+while read -r event; do
+  case $(jq -r '.method' <<<"$event" 2>/dev/null) in
+  wayvnc-startup) wayvnc_started ;;
+  wayvnc-shutdown) wayvnc_stopped ;;
+  esac
+done < <(wayvncctl --json --wait --reconnect event-receive)

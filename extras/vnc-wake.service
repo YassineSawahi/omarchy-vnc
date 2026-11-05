@@ -1,0 +1,13 @@
+[Unit]
+Description=Keep the display lit while wayvnc is running
+After=graphical-session.target
+PartOf=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+ExecStart=%h/.local/bin/vnc-wake
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

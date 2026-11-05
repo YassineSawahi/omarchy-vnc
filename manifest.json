@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.yassinesawahi.vnc",
+  "name": "VNC",
+  "version": "1.1.0",
+  "author": "Yassine Sawahi",
+  "homepage": "https://github.com/YassineSawahi/omarchy-vnc",
+  "license": "MIT",
+  "description": "Turn wayvnc screen sharing on and off from the bar, see who's viewing the screen, drop a viewer, and let guests in and out with a switch each",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "VNC",
+    "description": "VNC on/off switch with a switch per guest; the icon lights up while someone is viewing the screen",
+    "category": "Network",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "schema": [
+      {
+        "key": "notifyOnConnect",
+        "type": "boolean",
+        "label": "Notify when someone connects",
+        "description": "Show a notification each time a VNC viewer connects.",
+        "defaultValue": true
+      }
+    ]
+  }
+}

@@ -36,7 +36,19 @@ import time
 
 CONFIG = os.path.expanduser("~/.config/wayvnc/config")
 GUESTS = os.path.expanduser("~/.config/wayvnc/guests.json")
-RUNTIME = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+def runtime_dir():
+    """$XDG_RUNTIME_DIR, which is yours alone. Without it, a private folder in ~/.cache, never
+    /tmp, where another account could plant these files (or the let-in list) first."""
+    d = os.environ.get("XDG_RUNTIME_DIR")
+    if d and os.path.isdir(d):
+        return d
+    d = os.path.join(os.path.expanduser("~/.cache"), "omarchy-vnc-run")
+    os.makedirs(d, mode=0o700, exist_ok=True)
+    os.chmod(d, 0o700)
+    return d
+
+
+RUNTIME = runtime_dir()
 LOG = os.path.join(RUNTIME, "omarchy-vnc.log")
 LET_IN = os.path.join(RUNTIME, "omarchy-vnc.guests.json")   # names let in right now
 GATE_STATE = os.path.join(RUNTIME, "omarchy-vnc.gate.json")  # the gate's pid and live sessions
@@ -72,6 +84,20 @@ def read_config():
     except OSError:
         pass
     return cfg
+
+
+def config_problem(cfg):
+    """Why wayvnc mustn't start with this config, or None. Without a password, anyone who can reach
+    its port sees and drives your desktop, and that includes every other account on this PC."""
+    if cfg.get("enable_auth") != "true" or not cfg.get("password"):
+        return "Set enable_auth=true, a username and a password in ~/.config/wayvnc/config first (see the README)."
+    try:
+        if os.stat(CONFIG).st_mode & 0o077:
+            return ("~/.config/wayvnc/config holds your VNC password and other accounts can read it. "
+                    "Run: chmod 600 ~/.config/wayvnc/config")
+    except OSError:
+        return "Can't read ~/.config/wayvnc/config."
+    return None
 
 
 def read_json(path, default):
@@ -202,7 +228,7 @@ def status():
     print(json.dumps({
         "time": int(time.time()),
         "running": clients is not None,
-        "listen": f"{cfg.get('address', '0.0.0.0')}:{cfg.get('port', '5900')}",
+        "listen": f"{cfg.get('address', 'localhost')}:{cfg.get('port', '5900')}",  # wayvnc's own defaults
         "username": cfg.get("username", ""),
         "auth": cfg.get("enable_auth") == "true",
         "viewers": shown,
@@ -249,6 +275,10 @@ def wake_display():
 def turn_on():
     if viewers() is not None:
         return 0
+    problem = config_problem(read_config())
+    if problem:
+        notify("VNC stays off", problem, "critical")
+        return 1
     wake_display()
     with open(LOG, "w") as log:
         subprocess.Popen(launcher() + WAYVNC, stdin=subprocess.DEVNULL, stdout=log, stderr=log,

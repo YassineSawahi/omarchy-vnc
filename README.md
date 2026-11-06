@@ -27,6 +27,28 @@ Guests are people whose PCs are on your tailnet but who should only get in while
 
 3. The guest connects their VNC viewer to `<your Tailscale IP>::5901`.
 
+## How it works
+
+Everything runs on this PC. Viewers reach it over [Tailscale](https://tailscale.com), so it works the same at home and away, and nothing is opened on your router or to the internet.
+
+- **wayvnc** is the server. It listens on the address in `~/.config/wayvnc/config`, your PC's Tailscale address, so only devices on your tailnet can reach port 5900. Your tailnet policy decides which ones.
+- **`vnc.py`** is the helper behind the panel. It starts wayvnc, and talks to it through `wayvncctl` on wayvnc's local control socket: who's connected, drop one, shut down. It asks `tailscale status` for the device name behind each viewer's address.
+- **The widget** runs `vnc.py status` on a timer, and keeps `wayvncctl event-receive` open so a viewer connecting or leaving shows up at once (and brings the notification).
+- **The guest door** is `vnc.py gate`. It runs only while at least one guest is let in, listening on the guest port (5901) on the same address. It looks at where each connection comes from: a guest who's let in is piped through to wayvnc, anyone else is hung up on. It re-reads the let-in list in `$XDG_RUNTIME_DIR` twice a second, cuts a guest's session as soon as their switch goes off, and exits when nobody is let in. Because guests come through the door, wayvnc sees this PC's own address for them; the door tells the panel who's behind it.
+- **From your phone:** with [omarchy-phone](https://github.com/YassineSawahi/omarchy-phone), KDE Connect's "VNC on/off" button runs the same switch on this PC and sends the result back to the phone.
+
+```text
+ YOUR DEVICES                              THIS PC
+ VNC viewer ----- Tailscale, port 5900 ---> wayvnc (on the Tailscale address)
+                                              ^            ^
+ A GUEST'S PC                                 |            | wayvncctl
+ VNC viewer ----- Tailscale, port 5901 ---> guest door     | (local socket)
+                  (only while a guest       (vnc.py gate)  |
+                   is let in)                            vnc.py <-- bar widget
+```
+
+**Locked by default.** Without a password, anyone who can reach wayvnc's port, every other account on this PC included, would see and drive your desktop, so the panel only starts wayvnc with authentication on and the config private (see Install). The helper's own files (its log, who's let in) live in `$XDG_RUNTIME_DIR`, never in `/tmp`.
+
 ## Install
 
 ```bash
@@ -42,6 +64,8 @@ enable_auth=true
 username=me
 password=change-me
 ```
+
+It holds your password, so keep it yours alone: `chmod 600 ~/.config/wayvnc/config`. The panel won't start wayvnc without `enable_auth=true` and a password, or while other accounts can read that file.
 
 ## Controls
 
